@@ -1,7 +1,7 @@
 # FLoD: Integrating Flexible Level of Detail into 3D Gaussian Splatting for Customizable Rendering
 
 [![arXiv](https://img.shields.io/badge/arXiv-2408.128894-b31b1b.svg)](https://arxiv.org/pdf/2408.12894v1) 
-![Github Pages](https://img.shields.io/badge/github%20pages-121013?style=for-the-badge&logo=github&logoColor=white)(https://3dgs-flod.github.io/flod.github.io/)
+![Github Pages]((https://3dgs-flod.github.io/flod.github.io/))
 
 We build our code for FLoD on top of the open-source code of 3D Gaussian Splatting.
 In accordance with the licensing requirements, we have not deleted any license information from the base code. 
