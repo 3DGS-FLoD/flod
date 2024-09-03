@@ -1,5 +1,7 @@
 # FLoD: Integrating Flexible Level of Detail into 3D Gaussian Splatting for Customizable Rendering
 
+Yunji Seo*, Young Sun Choi, Hyun Seung Son, [Youngjung Uh](https://vilab.yonsei.ac.kr/member/professor)
+
 [![arXiv](https://img.shields.io/badge/arXiv-2408.128894-b31b1b.svg)](https://arxiv.org/pdf/2408.12894v1) 
 [![Project Page](https://img.shields.io/badge/Visit-Project_Page-007ec6.svg)](https://3dgs-flod.github.io/flod.github.io/)
 
