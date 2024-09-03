@@ -10,7 +10,7 @@ Yunji Seo*, Young Sun Choi, Hyun Seung Son, [Youngjung Uh](https://vilab.yonsei.
 ## Installation
 Our code was tested on conda environment installed with environment.yml and the submodules below.
 
-```shell
+```ksh
 # Setup conda environement
 (help fill in here for installing environment.yml)
 
@@ -26,12 +26,12 @@ pip install submodules/simple-knn
 
 ## Training and Evaluation
 To reproduce, run...
-```console
+```fish
 train_{dataset_name}.sh # dl3dv / mipnerf / tnt
 ```
 
 Render and evaluate by...
-```zsh
+```fish
 render_single.sh # for individual level rendering of 3DGS-FLoD
 render_selective.sh # for selective rendering of 3DGS-FLoD
 ```
