@@ -52,3 +52,23 @@ SIBR_viewers/install/bin/SIBR_flodViewer_app /path/to/your/model
 ## Licencse
 We build our code for FLoD on top of the open-source code of 3D Gaussian Splatting.  
 Hence our licencse follows [graphdeco-inria/gaussian-splatting](https://github.com/graphdeco-inria/gaussian-splatting)
+
+
+## Acknowledgement
+We would like to express our gratitude to the authors of the 3D Gaussian Splatting.  
+Their work has laid the foundation for this research.  
+Our code is largely based on their open-source project: [graphdeco-inria/gaussian-splatting](https://github.com/graphdeco-inria/gaussian-splatting)
+
+
+## Citation
+```bibtex
+@misc{seo2024flod,
+      title={FLoD: Integrating Flexible Level of Detail into 3D Gaussian Splatting for Customizable Rendering}, 
+      author={Yunji Seo and Young Sun Choi and Hyun Seung Son and Youngjung Uh},
+      year={2024},
+      eprint={2408.12894},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2408.12894}, 
+}
+```
