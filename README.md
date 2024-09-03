@@ -41,7 +41,7 @@ render_selective.sh # for selective rendering of 3DGS-FLoD
 ```
 
 ## Viewer(Demo)
-<video src="https://github.com/3DGS-FLoD/flod/blob/main/assets/demo-garden.mp4" autoplay loop muted playsinline>
+<video src="https://github.com/3DGS-FLoD/flod/blob/main/assets/demo-garden.mp4" autoplay loop muted playsinline/>
 
 To run viewer as demonstrated on our project page
 ```bash
