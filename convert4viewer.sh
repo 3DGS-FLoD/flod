@@ -1,0 +1,1 @@
+python convert4viewer.py -m /path/to/your/model
