@@ -16,17 +16,23 @@ Our code was tested on conda environment installed with environment.yml and the 
 ```bash
 git clone https://github.com/3DGS-FLoD/flod.git
 cd flod
+```
 
-# Setup conda environment
+Setup conda environment
+```bash
 conda env create -f environment.yml
 conda activate flod
+```
 
-# Clone submodules
+Clone submodules
+```bash
 mkdir submodules
 git clone https://github.com/graphdeco-inria/diff-gaussian-rasterization submodules/diff-gaussian-rasterization
 git clone https://gitlab.inria.fr/bkerbl/simple-knn.git submodules/simple-knn
+```
 
-# Install dependencies
+Install dependencies
+```bash
 sudo apt install libglm-dev
 pip install submodules/diff-gaussian-rasterization
 pip install submodules/simple-knn
