@@ -10,7 +10,7 @@ Yunji Seo*, Young Sun Choi, Hyun Seung Son, [Youngjung Uh](https://vilab.yonsei.
 ## Installation
 Our code was tested on conda environment installed with environment.yml and the submodules below.
 
-```sh
+```shell
 # Setup conda environement
 (help fill in here for installing environment.yml)
 
