@@ -19,6 +19,7 @@ git clone https://gitlab.inria.fr/bkerbl/simple-knn.git submodules/simple-knn
 sudo apt install libglm-dev
 pip install submodules/diff-gaussian-rasterization
 pip install submodules/simple-knn
+```bash
 
 ## Training and Evaluation
 To reproduce, run...
