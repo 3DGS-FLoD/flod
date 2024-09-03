@@ -10,7 +10,7 @@ Yunji Seo*, Young Sun Choi, Hyun Seung Son, [Youngjung Uh](https://vilab.yonsei.
 ## Installation
 Our code was tested on conda environment installed with environment.yml and the submodules below.
 
-```bash
+```console
 # Setup conda environement
 (help fill in here for installing environment.yml)
 
@@ -26,23 +26,23 @@ pip install submodules/simple-knn
 
 ## Training and Evaluation
 To reproduce, run...
-```bash
-train_{dataset_name}.sh to train 3DGS-FLoD
+```console
+train_{dataset_name}.sh # dl3dv / mipnerf / tnt
 ```
 
 Render and evaluate by...
-```bash
+```console
 render_single.sh # for individual level rendering of 3DGS-FLoD
-render_selective.sh #for selective rendering of 3DGS-FLoD
+render_selective.sh # for selective rendering of 3DGS-FLoD
 ```
 
 ## Viewer(Demo)
 To run viewer as demonstrated on our project page
-```bash
+```console
 convert4viewer.sh
 SIBR_viewers/install/bin/SIBR_flodViewer_app /path/to/your/model
 ```
 
 ## Licencse
-We build our code for FLoD on top of the open-source code of 3D Gaussian Splatting.
+We build our code for FLoD on top of the open-source code of 3D Gaussian Splatting.  
 Hence our licencse follows [graphdeco-inria/gaussian-splatting](https://github.com/graphdeco-inria/gaussian-splatting)
