@@ -6,6 +6,8 @@ Yunji Seo*, Young Sun Choi, Hyun Seung Son, [Youngjung Uh](https://vilab.yonsei.
 [![Project Page](https://img.shields.io/badge/Visit-Project_Page-007ec6.svg)](https://3dgs-flod.github.io/flod.github.io/)
 
 ## Overview
+![Overiew](https://github.com/3DGS-FLoD/flod/blob/main/assets/overall.png)
+
 We introduce integrating a Flexible Level of Detail (FLoD) to 3DGS, to allow a scene to be rendered at varying levels of detail according to hardware capabilities.  
 
 ## Installation
@@ -39,6 +41,9 @@ render_selective.sh # for selective rendering of 3DGS-FLoD
 ```
 
 ## Viewer(Demo)
+<video src="https://github.com/3DGS-FLoD/flod/blob/main/assets/demo-garden.mp4" autoplay loop muted playsinline>
+</video>
+
 To run viewer as demonstrated on our project page
 ```bash
 convert4viewer.sh
