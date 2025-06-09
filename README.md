@@ -6,7 +6,7 @@ Yunji Seo*, Young Sun Choi*, Hyun Seung Son, [Youngjung Uh](https://vilab.yonsei
 [![Project Page](https://img.shields.io/badge/Visit-Project_Page-007ec6.svg)](https://3dgs-flod.github.io/flod.github.io/)
 
 ## Overview
-<img src="https://github.com/3DGS-FLoD/flod/blob/main/assets/overall.jpeg" alt="Overview" width="50%" />
+<img src="https://github.com/3DGS-FLoD/flod/blob/main/assets/overall.jpeg" alt="Overview" width="100%" />
 
 We introduce integrating a Flexible Level of Detail (FLoD) to 3DGS, to allow a scene to be rendered at varying levels of detail according to hardware capabilities.  
 
