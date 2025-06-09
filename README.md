@@ -40,12 +40,12 @@ pip install submodules/simple-knn
 ## Training and Evaluation
 To reproduce, run...
 ```bash
-train.sh # mipnerf / tnt / dl3dv 
+train.sh 
 ```
 
 Render and evaluate by...
 ```bash
-render.sh # for single level rendering and selective rendering (predetermined and per-view) of 3DGS-FLoD
+render.sh 
 ```
 
 ## Viewer(Demo)
@@ -54,7 +54,7 @@ https://github.com/user-attachments/assets/04de9f26-b25d-4aa9-bed8-5fd3060f0b49
 To run viewer as demonstrated on our project page
 ```bash
 convert4viewer.sh
-SIBR_viewers/install/bin/SIBR_flodViewer_app /path/to/your/model
+SIBR_viewers/install/bin/SIBR_flodViewer_app -m /path/to/your/model
 ```
 
 ## Licencse
