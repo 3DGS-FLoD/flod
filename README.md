@@ -6,7 +6,7 @@ Yunji Seo*, Young Sun Choi*, Hyun Seung Son, [Youngjung Uh](https://vilab.yonsei
 [![Project Page](https://img.shields.io/badge/Visit-Project_Page-007ec6.svg)](https://3dgs-flod.github.io/flod.github.io/)
 
 ## Overview
-<img src="https://github.com/3DGS-FLoD/flod/blob/main/assets/overall.png" alt="Overview" width="50%" />
+<img src="https://github.com/3DGS-FLoD/flod/blob/main/assets/overall.jpeg" alt="Overview" width="50%" />
 
 We introduce integrating a Flexible Level of Detail (FLoD) to 3DGS, to allow a scene to be rendered at varying levels of detail according to hardware capabilities.  
 
@@ -26,7 +26,6 @@ conda activate flod
 
 Clone submodules
 ```bash
-mkdir submodules
 git clone https://github.com/graphdeco-inria/diff-gaussian-rasterization submodules/diff-gaussian-rasterization
 git clone https://gitlab.inria.fr/bkerbl/simple-knn.git submodules/simple-knn
 ```
@@ -41,13 +40,12 @@ pip install submodules/simple-knn
 ## Training and Evaluation
 To reproduce, run...
 ```bash
-train_{dataset_name}.sh # dl3dv / mipnerf / tnt
+train.sh # mipnerf / tnt / dl3dv 
 ```
 
 Render and evaluate by...
 ```bash
-render_single.sh # for individual level rendering of 3DGS-FLoD
-render_selective.sh # for selective rendering of 3DGS-FLoD
+render.sh # for single level rendering and selective rendering (predetermined and per-view) of 3DGS-FLoD
 ```
 
 ## Viewer(Demo)
