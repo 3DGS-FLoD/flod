@@ -58,6 +58,7 @@ class ModelParams(ParamGroup):
         self._source_path = ""
         self._model_path = ""
         self._images = "images"
+        self._alpha_masks = ""
         self._resolution = -1
         self._white_background = False
         self.data_device = "cuda"
@@ -71,6 +72,8 @@ class ModelParams(ParamGroup):
         #* init
         self.use_voxel_sampling = False
         self.voxel_sampling_size = 0.2
+        
+        self.init_opacity = 0.1 
         
         super().__init__(parser, "Loading Parameters", sentinel)
 
@@ -92,15 +95,17 @@ class OptimizationParams(ParamGroup):
         self.position_lr_init = 0.00016
         self.position_lr_final = 0.0000016
         self.position_lr_delay_mult = 0.01
-        self.position_lr_max_steps = 30_000
+        self.position_lr_max_steps = 30_000     
+        
         self.feature_lr = 0.0025   
         self.opacity_lr = 0.05
         self.scaling_lr = 0.005
         self.rotation_lr = 0.001
-        self.percent_dense = 0.01
+        self.percent_dense = 0.01 # 3dgs:0.01, absgs:0.001, h3dgs:0.0001 
         self.lambda_dssim = [0.2]
         
         self.densify_grad_threshold = [0.0002]
+        self.densify_grad_abs_threshold = [0.0004]
         self.densification_interval = [2000, 1000, 500, 500, 200]
         self.densify_from_iter = [500]
         self.densify_until_iter = [5000, 6000, 8000, 10000, 15000]

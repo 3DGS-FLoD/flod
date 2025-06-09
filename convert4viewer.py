@@ -8,6 +8,7 @@ from argparse import ArgumentParser
 from arguments import ModelParams, PipelineParams, get_combined_args
 from scene import Scene, GaussianModel
 from plyfile import PlyData, PlyElement
+import copy
 
 def compute_projection_scale_and_distance(lod_scaling_limit, fovx, fovy, width, height, pixel_size=1.0):
         
@@ -23,38 +24,31 @@ def compute_projection_scale_and_distance(lod_scaling_limit, fovx, fovy, width, 
     
     return max_distance
 
-def compose_hlod_and_save(path, gaussians, views, lod_max, lod_min=1, pixel_size=1.0):
+def compose_hlod_and_save(path, model_path, gaussians, views, lod_max, lod_min=1, pixel_size=1.0):
         
     scaling_ratio = gaussians.lod_scaling_ratio
     
     camera_center = torch.stack([view.camera_center for view in views]).mean(dim=0)
     
     view = views[0]
-    lod_scaling_limit = gaussians.get_lod_scaling_lower_bound(lod_max-1)
+    lod_scaling_limit = gaussians.lod1_scaling_lower_bound / (scaling_ratio ** (lod_max - 1 - 1))
     lod_max_dist_upper_bound = compute_projection_scale_and_distance(lod_scaling_limit, view.FoVx, view.FoVy, view.image_width, view.image_height, pixel_size=pixel_size)
     lod_max_dist_lower_bound = 0
-    
-    gaussians.parent_lod_gaussian_stack
+
     xyz, opacity, scaling, rotation, features_dc, features_rest = [], [], [], [], [], []
-    
     for lod in range(lod_max, lod_min-1, -1):
-        
-        if lod == gaussians.current_lod:
-            xyz_lod = gaussians._xyz
-            opacity_lod = gaussians._opacity
-            scaling_lod = gaussians.scaling_inverse_activation(gaussians.get_lod_scaling(lod))
-            rotation_lod = gaussians._rotation
-            features_dc_lod = gaussians._features_dc
-            features_rest_lod = gaussians._features_rest
-            
-        else: 
-            xyz_lod = gaussians.parent_lod_gaussian_stack[f'lod_{lod}']['xyz']
-            opacity_lod = gaussians.parent_lod_gaussian_stack[f'lod_{lod}']['opacity']
-            scaling_lod = gaussians.scaling_inverse_activation(gaussians.get_lod_scaling(lod))
-            rotation_lod = gaussians.parent_lod_gaussian_stack[f'lod_{lod}']['rotation']
-            features_dc_lod = gaussians.parent_lod_gaussian_stack[f'lod_{lod}']['features_dc']
-            features_rest_lod = gaussians.parent_lod_gaussian_stack[f'lod_{lod}']['features_rest']
-            
+        # For each LOD, load a new GaussianModel at that LOD
+        gaussians_lod = copy.copy(gaussians)
+        gaussians_lod.load(model_path=model_path, load_iteration=-1, load_lod=lod)
+        gaussians_lod = adjust_scale(gaussians_lod)
+
+        xyz_lod = gaussians_lod._xyz
+        opacity_lod = gaussians_lod._opacity
+        scaling_lod = gaussians_lod._scaling
+        rotation_lod = gaussians_lod._rotation
+        features_dc_lod = gaussians_lod._features_dc
+        features_rest_lod = gaussians_lod._features_rest
+
         dists_lod = torch.sqrt(((xyz_lod - camera_center)**2).sum(dim=1))
         
         if lod == lod_min:
@@ -169,7 +163,7 @@ def convert(dataset : ModelParams, iteration : int, lod : int):
         scene = Scene(dataset, gaussians=gaussians, load_iteration=iteration, load_lod=level, shuffle=False, load_image_device="cuda")
         
         save_path = os.path.join(selective_subset_path, f"levels_{level}_{level-1}_{level-2}_point_cloud.ply")
-        gaussians_hlod = compose_hlod_and_save(save_path, gaussians, scene.getTrainCameras(), lod_max=level, lod_min=level-2, pixel_size=1.0)
+        compose_hlod_and_save(save_path, dataset.model_path, gaussians, scene.getTrainCameras(), lod_max=level, lod_min=level-2, pixel_size=1.0)
 
 
 if __name__ == "__main__":

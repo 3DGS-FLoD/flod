@@ -22,8 +22,7 @@ from pathlib import Path
 from plyfile import PlyData, PlyElement
 from utils.sh_utils import SH2RGB
 from scene.gaussian_model import BasicPointCloud
-import cv2
-import open3d as o3d
+
 
 class CameraInfo(NamedTuple):
     uid: int
@@ -36,7 +35,8 @@ class CameraInfo(NamedTuple):
     image_name: str
     width: int
     height: int
-
+    is_test: bool
+    
 class SceneInfo(NamedTuple):
     point_cloud: BasicPointCloud
     train_cameras: list
@@ -67,11 +67,10 @@ def getNerfppNorm(cam_info):
 
     return {"translate": translate, "radius": radius}
 
-def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder):
+def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder, test_cam_names_list=None):
     cam_infos = []
     for idx, key in enumerate(cam_extrinsics):
         sys.stdout.write('\r')
-        # the exact output you're looking for:
         sys.stdout.write("Reading camera {}/{}".format(idx+1, len(cam_extrinsics)))
         sys.stdout.flush()
 
@@ -99,12 +98,20 @@ def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder):
         image_path = os.path.join(images_folder, os.path.basename(extr.name))
         image_name = os.path.basename(image_path).split(".")[0]
         image = Image.open(image_path)
-
-        cam_info = CameraInfo(uid=uid, R=R, T=T, FovY=FovY, FovX=FovX, image=image,
-                              image_path=image_path, image_name=image_name, width=width, height=height)
+        
+        if test_cam_names_list is not None:
+            cam_info = CameraInfo(uid=uid, R=R, T=T, FovY=FovY, FovX=FovX, image=image,
+                                image_path=image_path, image_name=image_name, width=width, height=height,
+                                is_test=f"{image_name}.png" in test_cam_names_list)
+        else:
+            cam_info = CameraInfo(uid=uid, R=R, T=T, FovY=FovY, FovX=FovX, image=image,
+                                image_path=image_path, image_name=image_name, width=width, height=height,
+                                is_test=False)
+            
         cam_infos.append(cam_info)
     sys.stdout.write('\n')
     return cam_infos
+
 
 def fetchPly(path):
     plydata = PlyData.read(path)
@@ -144,12 +151,29 @@ def readColmapSceneInfo(path, images, eval, llffhold=8, load_ply=True):
         cam_intrinsics = read_intrinsics_text(cameras_intrinsic_file)
 
     reading_dir = "images" if images == None else images
-    cam_infos_unsorted = readColmapCameras(cam_extrinsics=cam_extrinsics, cam_intrinsics=cam_intrinsics, images_folder=os.path.join(path, reading_dir))
-    cam_infos = sorted(cam_infos_unsorted.copy(), key = lambda x : x.image_name)
+    
 
+    if os.path.exists(os.path.join(path, "sparse/0", "test.txt")):
+        with open(os.path.join(path, "sparse/0", "test.txt"), 'r') as file:
+            test_cam_names_list = [line.strip() for line in file]
+    else:
+        test_cam_names_list = None
+    
+    cam_infos_unsorted = readColmapCameras(cam_extrinsics=cam_extrinsics, cam_intrinsics=cam_intrinsics, 
+                                           images_folder=os.path.join(path, reading_dir),
+                                           test_cam_names_list=test_cam_names_list)
+    cam_infos = sorted(cam_infos_unsorted.copy(), key = lambda x : x.image_name)
+    
     if eval:
-        train_cam_infos = [c for idx, c in enumerate(cam_infos) if idx % llffhold != 0]
-        test_cam_infos = [c for idx, c in enumerate(cam_infos) if idx % llffhold == 0]
+        if test_cam_names_list is not None:
+            train_cam_infos = [c for c in cam_infos if not c.is_test]
+            test_cam_infos = [c for c in cam_infos if c.is_test]
+        else: 
+            train_cam_infos = [c for idx, c in enumerate(cam_infos) if idx % llffhold != 0]
+            test_cam_infos = [c for idx, c in enumerate(cam_infos) if idx % llffhold == 0]
+            
+        print(len(test_cam_infos), "test images")
+        print(len(train_cam_infos), "train images")
     else:
         train_cam_infos = cam_infos
         test_cam_infos = []
@@ -181,6 +205,7 @@ def readColmapSceneInfo(path, images, eval, llffhold=8, load_ply=True):
                            nerf_normalization=nerf_normalization,
                            ply_path=ply_path)
     return scene_info
+
 
 def readCamerasFromTransforms(path, transformsfile, white_background, extension=".png"):
     cam_infos = []
@@ -267,5 +292,5 @@ def readNerfSyntheticInfo(path, white_background, eval, extension=".png", load_p
 
 sceneLoadTypeCallbacks = {
     "Colmap": readColmapSceneInfo,
-    "Blender" : readNerfSyntheticInfo,
+    "Blender" : readNerfSyntheticInfo
 }

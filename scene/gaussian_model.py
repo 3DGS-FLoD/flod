@@ -30,6 +30,7 @@ class GaussianModel:
 
     # Adjust the scale constraint according to the current level (Sec 4.1 eq.3)
     def setup_scaling_activation(self):
+                
         if self.current_lod < self.max_lod:
             self.scaling_lower_bound = self.lod1_scaling_lower_bound / self.lod_scaling_ratio ** (self.current_lod - 1)
         else:
@@ -56,8 +57,7 @@ class GaussianModel:
         self.rotation_activation = torch.nn.functional.normalize
 
         self.shape_activation = torch.sigmoid
-
-
+    
     def __init__(self, 
                  sh_degree                  : int,
                  lod1_scaling_lower_bound   : float,
@@ -66,7 +66,7 @@ class GaussianModel:
                  current_lod                : int = 1,
                  max_lod                    : int = 5,
                  use_voxel_sampling         : bool = False,
-                 voxel_sampling_size        : float = 0.2,
+                 voxel_sampling_size        : float = 0.2
                  ):
         
         self.active_sh_degree = 0
@@ -91,14 +91,11 @@ class GaussianModel:
         self.current_lod = current_lod
         self.max_lod = max_lod
         
-        self._ancestry = torch.empty(0)
-        
-        self.parent_lod_gaussian_stack = {}
-        
         self.use_voxel_sampling = use_voxel_sampling
         self.voxel_sampling_size = voxel_sampling_size
-        
+                                
         self.setup_functions()
+        
         
     def to_cpu(self):
         self._xyz = self._xyz.to("cpu")
@@ -107,7 +104,9 @@ class GaussianModel:
         self._opacity = self._opacity.to("cpu")
         self._scaling = self._scaling.to("cpu")
         self._rotation = self._rotation.to("cpu")
-        
+        try: self._ancestry = self._ancestry.to("cpu")
+        except: pass
+
     def to_cuda(self):
         self._xyz = self._xyz.to("cuda")
         self._features_dc = self._features_dc.to("cuda")
@@ -115,7 +114,9 @@ class GaussianModel:
         self._opacity = self._opacity.to("cuda")
         self._scaling = self._scaling.to("cuda")
         self._rotation = self._rotation.to("cuda")
-    
+        try: self._ancestry = self._ancestry.to("cuda")
+        except: pass
+            
     def capture(self):
         return (
             self.active_sh_degree,
@@ -173,7 +174,8 @@ class GaussianModel:
     @property
     def get_opacity(self):
         return self.opacity_activation(self._opacity)
-    
+ 
+ 
     def take_hlod_attributes(self,
                              xyz,
                              opacity,
@@ -194,53 +196,16 @@ class GaussianModel:
         self.scaling_activation = nn.Identity()
         self.opacity_activation = nn.Identity()
         self.rotation_activation = nn.Identity()
-    
-    
-    def get_lod_xyz(self, lod):
-        if lod != self.current_lod:
-            return self.parent_lod_gaussian_stack[f'lod_{lod}']['xyz']
-        else:
-            return self._xyz
-    
-    def get_lod_scaling(self, lod):
-        if lod != self.current_lod:
-            scaling = self.parent_lod_gaussian_stack[f'lod_{lod}']['scaling']
-            scaling_lower_bound = self.parent_lod_gaussian_stack[f'lod_{lod}']['scaling_lower_bound']
-            return self.scaling_activation(scaling) + scaling_lower_bound
-        else:
-            return self.scaling_activation(self._scaling) + self.scaling_lower_bound
-            
-    def get_lod_scaling_lower_bound(self, lod):
-        if lod != self.current_lod:
-            return self.parent_lod_gaussian_stack[f'lod_{lod}']['scaling_lower_bound']
-        else:
-            return self.scaling_lower_bound  
-        
-    def get_lod_attributes(self, lod):
-        if lod != self.current_lod:
 
-            xyz = self.parent_lod_gaussian_stack[f'lod_{lod}']['xyz']
-            opacity = self.parent_lod_gaussian_stack[f'lod_{lod}']['opacity']
-            scaling = self.parent_lod_gaussian_stack[f'lod_{lod}']['scaling']
-            rotation = self.parent_lod_gaussian_stack[f'lod_{lod}']['rotation']
-            features_dc = self.parent_lod_gaussian_stack[f'lod_{lod}']['features_dc']
-            features_rest = self.parent_lod_gaussian_stack[f'lod_{lod}']['features_rest']
-            scaling_lower_bound = self.parent_lod_gaussian_stack[f'lod_{lod}']['scaling_lower_bound']
-            
-            opacity = self.opacity_activation(opacity)
-            scaling = self.scaling_activation(scaling) + scaling_lower_bound
-            rotation = self.rotation_activation(rotation)
-            features = torch.cat((features_dc, features_rest), dim=1)
-            
-        else:
 
-            xyz = self._xyz
-            opacity = self.opacity_activation(self._opacity)
-            scaling = self.scaling_activation(self._scaling) + self.scaling_lower_bound
-            rotation = self.rotation_activation(self._rotation)
-            features = torch.cat((self._features_dc, self._features_rest), dim=1)
-            
-        return xyz, opacity, scaling, rotation, features
+    def get_all_attributes(self):
+        xyz = self._xyz
+        opacity = self.opacity_activation(self._opacity)
+        scaling = self.scaling_activation(self._scaling) + self.scaling_lower_bound
+        rotation = self.rotation_activation(self._rotation)
+        features = torch.cat((self._features_dc, self._features_rest), dim=1)
+        return xyz, opacity, scaling, rotation, features        
+
 
     def get_covariance(self, scaling_modifier = 1):
         return self.covariance_activation(self.get_scaling, scaling_modifier, self._rotation)
@@ -253,7 +218,7 @@ class GaussianModel:
         data = np.unique(np.round(data/voxel_size), axis=0)*voxel_size
         return data
     
-    def create_from_pcd(self, pcd : BasicPointCloud, spatial_lr_scale : float):
+    def create_from_pcd(self, pcd : BasicPointCloud, spatial_lr_scale : float, init_opacity : float):
         
         self.spatial_lr_scale = spatial_lr_scale
         
@@ -279,7 +244,8 @@ class GaussianModel:
         rots = torch.zeros((fused_point_cloud.shape[0], 4), device="cuda")
         rots[:, 0] = 1
 
-        opacities = inverse_sigmoid(0.1 * torch.ones((fused_point_cloud.shape[0], 1), dtype=torch.float, device="cuda"))
+        #* 3dgs init opacity = 0.1, h3dgs init opacity = 0.01
+        opacities = inverse_sigmoid(init_opacity * torch.ones((fused_point_cloud.shape[0], 1), dtype=torch.float, device="cuda"))
 
         self._xyz = nn.Parameter(fused_point_cloud.requires_grad_(True))
         self._features_dc = nn.Parameter(features[:,:,0:1].transpose(1, 2).contiguous().requires_grad_(True))
@@ -297,7 +263,7 @@ class GaussianModel:
         self.percent_dense = training_args.percent_dense
         self.xyz_gradient_accum = torch.zeros((self.get_xyz.shape[0], 1), device="cuda")
         self.denom = torch.zeros((self.get_xyz.shape[0], 1), device="cuda")
-       
+              
         l = [
             {'params': [self._xyz], 'lr': training_args.position_lr_init * self.spatial_lr_scale, "name": "xyz"},
             {'params': [self._features_dc], 'lr': training_args.feature_lr, "name": "f_dc"},
@@ -333,16 +299,27 @@ class GaussianModel:
         for i in range(self._rotation.shape[1]):
             l.append('rot_{}'.format(i))
             
-        if self._ancestry.nelement() != 0:
-            for i in range(self._ancestry.shape[1]):
-                l.append('ancestry_lod_{}'.format(i))
         return l
     
-    def load(self, model_path, load_lod=None, load_iteration=None, device="cuda"):
+    def construct_list_of_attributes_only(self):
+        l = ['x', 'y', 'z', 'nx', 'ny', 'nz']
+        for i in range(self._features_dc.shape[1]*self._features_dc.shape[2]):
+            l.append('f_dc_{}'.format(i))
+        for i in range(self._features_rest.shape[1]*self._features_rest.shape[2]):
+            l.append('f_rest_{}'.format(i))
+        l.append('opacity')
+        for i in range(self._scaling.shape[1]):
+            l.append('scale_{}'.format(i))
+        for i in range(self._rotation.shape[1]):
+            l.append('rot_{}'.format(i))
+            
+        return l
+    
+    def load(self, model_path, load_lod=None, load_iteration=None, device="cuda", load_independent_lvl=False):
         
         self.model_path = model_path
     
-        if load_lod != -1:
+        if load_lod != -1 and not load_independent_lvl:
             self.loaded_lod = load_lod
         else: # search for max lod at either -1 or None for load_lod value
             self.loaded_lod = searchForMaxLod(os.path.join(self.model_path, "point_cloud"))
@@ -357,20 +334,10 @@ class GaussianModel:
                                     f"lod_{self.loaded_lod}_iteration_{self.loaded_iter}",
                                     "point_cloud.ply"), device=device)
         
-        self.load_parent_lod_gaussian_stack(os.path.join(self.model_path,
-                                                           "point_cloud",
-                                                           f"lod_{self.loaded_lod}_iteration_{self.loaded_iter}",
-                                                           "ancestry.pt"), device=device)
-        
-
         self.current_lod = self.loaded_lod
+        if load_independent_lvl:
+            self.current_lod = load_lod
         self.setup_scaling_activation()
-    
-    def save_parent_lod_gaussian_stack(self, path):
-        torch.save(self.parent_lod_gaussian_stack, path)
-        
-    def load_parent_lod_gaussian_stack(self, path, device="cuda"):    
-        self.parent_lod_gaussian_stack = torch.load(path, map_location=device)
     
     def save_ply(self, path):
         mkdir_p(os.path.dirname(path))
@@ -382,16 +349,33 @@ class GaussianModel:
         opacities = self._opacity.detach().cpu().numpy()
         scale = self._scaling.detach().cpu().numpy()
         rotation = self._rotation.detach().cpu().numpy()
-        ancestry = self._ancestry.float().cpu().numpy()
 
         dtype_full = [(attribute, 'f4') for attribute in self.construct_list_of_attributes()]
 
         elements = np.empty(xyz.shape[0], dtype=dtype_full)
         
-        if self._ancestry.nelement() != 0:
-            attributes = np.concatenate((xyz, normals, f_dc, f_rest, opacities, scale, rotation, ancestry), axis=1)
-        else:
-            attributes = np.concatenate((xyz, normals, f_dc, f_rest, opacities, scale, rotation), axis=1)
+        attributes = np.concatenate((xyz, normals, f_dc, f_rest, opacities, scale, rotation), axis=1)
+
+        elements[:] = list(map(tuple, attributes))
+        el = PlyElement.describe(elements, 'vertex')
+        PlyData([el]).write(path)
+    
+    def save_ply_only(self, path):
+        mkdir_p(os.path.dirname(path))
+
+        xyz = self._xyz.detach().cpu().numpy()
+        normals = np.zeros_like(xyz)
+        f_dc = self._features_dc.detach().transpose(1, 2).flatten(start_dim=1).contiguous().cpu().numpy()
+        f_rest = self._features_rest.detach().transpose(1, 2).flatten(start_dim=1).contiguous().cpu().numpy()
+        opacities = self._opacity.detach().cpu().numpy()
+        scale = self._scaling.detach().cpu().numpy()
+        rotation = self._rotation.detach().cpu().numpy()
+
+        dtype_full = [(attribute, 'f4') for attribute in self.construct_list_of_attributes_only()]
+
+        elements = np.empty(xyz.shape[0], dtype=dtype_full)
+        
+        attributes = np.concatenate((xyz, normals, f_dc, f_rest, opacities, scale, rotation), axis=1)
 
         elements[:] = list(map(tuple, attributes))
         el = PlyElement.describe(elements, 'vertex')
@@ -431,14 +415,6 @@ class GaussianModel:
         for idx, attr_name in enumerate(rot_names):
             rots[:, idx] = np.asarray(plydata.elements[0][attr_name])
         
-        anc_names = [p.name for p in plydata.elements[0].properties if p.name.startswith("ancestry_lod_")]
-        if len(anc_names) > 0:
-            anc_names = sorted(anc_names, key = lambda x: int(x.split('_')[-1]))
-            ancestry = np.zeros((xyz.shape[0], len(anc_names)))
-            for idx, attr_name in enumerate(anc_names):
-                ancestry[:, idx] = np.asarray(plydata.elements[0][attr_name])
-            self._ancestry = torch.tensor(ancestry, dtype=torch.long, device=device)
-
         self._xyz = nn.Parameter(torch.tensor(xyz, dtype=torch.float, device=device).requires_grad_(True))
         self._features_dc = nn.Parameter(torch.tensor(features_dc, dtype=torch.float, device=device).transpose(1, 2).contiguous().requires_grad_(True))
         self._features_rest = nn.Parameter(torch.tensor(features_extra, dtype=torch.float, device=device).transpose(1, 2).contiguous().requires_grad_(True))
@@ -452,6 +428,7 @@ class GaussianModel:
         opacities_new = inverse_sigmoid(torch.min(self.get_opacity, torch.ones_like(self.get_opacity)*0.01))
         optimizable_tensors = self.replace_tensor_to_optimizer(opacities_new, "opacity")
         self._opacity = optimizable_tensors["opacity"]
+
 
     def replace_tensor_to_optimizer(self, tensor, name):
         optimizable_tensors = {}
@@ -496,9 +473,7 @@ class GaussianModel:
         self._opacity = optimizable_tensors["opacity"]
         self._scaling = optimizable_tensors["scaling"]
         self._rotation = optimizable_tensors["rotation"]
-
-        self._ancestry = self._ancestry[valid_points_mask] if self._ancestry.nelement() != 0 else self._ancestry
-
+        
         self.xyz_gradient_accum = self.xyz_gradient_accum[valid_points_mask]
 
         self.denom = self.denom[valid_points_mask]
@@ -526,7 +501,7 @@ class GaussianModel:
 
         return optimizable_tensors
 
-    def densification_postfix(self, new_xyz, new_features_dc, new_features_rest, new_opacities, new_scaling, new_rotation, new_ancestry):
+    def densification_postfix(self, new_xyz, new_features_dc, new_features_rest, new_opacities, new_scaling, new_rotation):
         d = {"xyz": new_xyz,
         "f_dc": new_features_dc,
         "f_rest": new_features_rest,
@@ -546,7 +521,6 @@ class GaussianModel:
         self.denom = torch.zeros((self.get_xyz.shape[0], 1), device="cuda")
         self.max_radii2D = torch.zeros((self.get_xyz.shape[0]), device="cuda")
         
-        self._ancestry = torch.cat([self._ancestry, new_ancestry], dim=0)
 
     def densify_and_split(self, grads, grad_threshold, scene_extent, N=2):
         n_init_points = self.get_xyz.shape[0]
@@ -556,7 +530,7 @@ class GaussianModel:
         selected_pts_mask = torch.where(padded_grad >= grad_threshold, True, False)
         selected_pts_mask = torch.logical_and(selected_pts_mask,
                                               torch.max(self.get_scaling, dim=1).values > self.percent_dense*scene_extent)
-
+        
         stds = self.get_scaling[selected_pts_mask].repeat(N,1)
         means = torch.zeros((stds.size(0), 3),device="cuda")
         samples = torch.normal(mean=means, std=stds)
@@ -567,42 +541,14 @@ class GaussianModel:
         new_features_dc = self._features_dc[selected_pts_mask].repeat(N,1,1)
         new_features_rest = self._features_rest[selected_pts_mask].repeat(N,1,1)
         new_opacity = self._opacity[selected_pts_mask].repeat(N,1)
-        new_ancestry = self._ancestry[selected_pts_mask].repeat(N,1) if self._ancestry.nelement() != 0 else self._ancestry
-
-        self.densification_postfix(new_xyz, new_features_dc, new_features_rest, new_opacity, new_scaling, new_rotation, new_ancestry)
+        
+        self.densification_postfix(new_xyz, new_features_dc, new_features_rest, new_opacity, new_scaling, new_rotation)
 
         prune_filter = torch.cat((selected_pts_mask, torch.zeros(N * selected_pts_mask.sum(), device="cuda", dtype=bool)))
                 
         self.prune_points(prune_filter)
-
-    def densify_and_clone(self, grads, grad_threshold, scene_extent):
-        # Extract points that satisfy the gradient condition
-        selected_pts_mask = torch.where(torch.norm(grads, dim=-1) >= grad_threshold, True, False)
-        selected_pts_mask = torch.logical_and(selected_pts_mask,
-                                              torch.max(self.get_scaling, dim=1).values <= self.percent_dense*scene_extent)
-        
-        new_xyz = self._xyz[selected_pts_mask]
-        new_features_dc = self._features_dc[selected_pts_mask]
-        new_features_rest = self._features_rest[selected_pts_mask]
-        new_opacities = self._opacity[selected_pts_mask]
-        new_scaling = self._scaling[selected_pts_mask]
-        new_rotation = self._rotation[selected_pts_mask]
-        new_ancestry = self._ancestry[selected_pts_mask] if self._ancestry.nelement() != 0 else self._ancestry
-        
-        self.densification_postfix(new_xyz, new_features_dc, new_features_rest, new_opacities, new_scaling, new_rotation, new_ancestry)
-
-    def add_densification_stats(self, viewspace_point_tensor, update_filter):
-        self.xyz_gradient_accum[update_filter] += torch.norm(viewspace_point_tensor.grad[update_filter,:2], dim=-1, keepdim=True)
-        self.denom[update_filter] += 1
         
 
-    def densify(self, max_grad, extent):
-        grads = self.xyz_gradient_accum / self.denom
-        grads[grads.isnan()] = 0.0
-
-        self.densify_and_clone(grads, max_grad, extent)
-        self.densify_and_split(grads, max_grad, extent)     
-           
     def prune(self, min_opacity, extent, max_screen_size, prune_overlap_threshold):
                 
         prune_mask = (self.get_opacity < min_opacity).squeeze()
@@ -618,60 +564,14 @@ class GaussianModel:
             big_points_ws = self.get_scaling.max(dim=1).values > 0.1 * extent
             prune_mask = torch.logical_or(torch.logical_or(prune_mask, big_points_vs), big_points_ws)
         self.prune_points(prune_mask)
-        
+                    
         torch.cuda.empty_cache()
 
-    def capture_parent_gaussian(self):
-        parent_gaussian = {
-            'xyz'                           : self._xyz,
-            'features_dc'                   : self._features_dc,
-            'features_rest'                 : self._features_rest,
-            'scaling'                       : self._scaling,
-            'rotation'                      : self._rotation,
-            'opacity'                       : self._opacity,    
-            'ancestry'                      : self._ancestry,
-            'max_radii2D'                   : self.max_radii2D,
-            'scaling_lower_bound'           : self.scaling_lower_bound,
-        }
-        
-        return parent_gaussian
-
-    def restore_parent_gaussian(self, lod):
-        if lod != self.current_lod: 
-            parent_gaussian = self.parent_lod_gaussian_stack[f'lod_{lod}']
-            
-            self._xyz = parent_gaussian['xyz']
-            self._features_dc = parent_gaussian['features_dc']
-            self._features_rest = parent_gaussian['features_rest']
-            self._scaling = parent_gaussian['scaling']
-            self._rotation = parent_gaussian['rotation']
-            self._opacity = parent_gaussian['opacity']
-            self._ancestry = parent_gaussian['ancestry']
-            self.max_radii2D = parent_gaussian['max_radii2D']
-            self.scaling_lower_bound = parent_gaussian['scaling_lower_bound']
-    
-    def stack_parent_gaussian(self):
-        self.parent_lod_gaussian_stack[f'lod_{self.current_lod}'] = self.capture_parent_gaussian()
-    
-    #* choose one hierarchy of gaussians based on parent gaussian at selected lod
-    def select_one_family(self, lod, family_index):
-        if self._ancestry.nelement() == 0:
-            select_family_index = torch.full((self._xyz.shape[0],), False, dtype=torch.bool)
-            select_family_index[family_index] = True
-        else: 
-            select_family_index = self._ancestry[:,lod-1] == family_index
-               
-        self._xyz = self._xyz[select_family_index]
-        self._features_dc = self._features_dc[select_family_index]
-        self._features_rest = self._features_rest[select_family_index]
-        self._scaling = self._scaling[select_family_index]
-        self._rotation = self._rotation[select_family_index]
-        self._opacity = self._opacity[select_family_index]
 
     def increase_lod(self):
-        #* stack parent lod gaussians
-        # Upon transitioning to the next level, clones of the Gaussians from the current level are created and saved as the final Gaussians of current level
-        self.stack_parent_gaussian()
+        #* move everything to CPU to prevent memory overhead
+        self.to_cpu()
+        torch.cuda.empty_cache()
         
         #* present values for splitting
         N = self.increase_lod_num_childs 
@@ -687,24 +587,45 @@ class GaussianModel:
         child_features_rest = self._features_rest.repeat(N,1,1)
         child_opacity = self._opacity.repeat(N,1)
         child_xyz = self._xyz.repeat(N,1)
-        
-        # parent gaussian labels for saving parent-child relationship
-        child_parent_index = torch.arange(0, self.get_xyz.shape[0], device="cuda")[:, None].repeat(N,1)
-       
+               
         #* set to training parameters
-        self._xyz = nn.Parameter(child_xyz.detach().requires_grad_(True))
-        self._features_dc = nn.Parameter(child_features_dc.detach().requires_grad_(True))
-        self._features_rest = nn.Parameter(child_features_rest.detach().requires_grad_(True))
-        self._opacity = nn.Parameter(child_opacity.detach().requires_grad_(True))
-        self._scaling = nn.Parameter(child_scaling.detach().requires_grad_(True))
-        self._rotation = nn.Parameter(child_rotation.detach().requires_grad_(True))
+        self._xyz = nn.Parameter(child_xyz.detach().to("cuda"), requires_grad=True)
+        self._features_dc = nn.Parameter(child_features_dc.detach().to("cuda"), requires_grad=True)
+        self._features_rest = nn.Parameter(child_features_rest.detach().to("cuda"), requires_grad=True)
+        self._opacity = nn.Parameter(child_opacity.detach().to("cuda"), requires_grad=True)
+        self._scaling = nn.Parameter(child_scaling.detach().to("cuda"), requires_grad=True)
+        self._rotation = nn.Parameter(child_rotation.detach().to("cuda"), requires_grad=True)
                                
-        if self._ancestry.nelement() == 0:
-            self._ancestry = child_parent_index
-        else:            
-            parent_greatparent_index = self._ancestry.repeat(N, 1)            
-            self._ancestry = torch.cat([parent_greatparent_index, child_parent_index], dim=1)
-   
         self.max_radii2D = torch.zeros((self.get_xyz.shape[0]), device="cuda")      
         
-        torch.cuda.empty_cache()
+        torch.cuda.empty_cache()        
+        self.to_cuda()
+        
+
+    def densify_and_clone(self, grads, grad_threshold, scene_extent):
+        # Extract points that satisfy the gradient condition
+        selected_pts_mask = torch.where(torch.norm(grads, dim=-1) >= grad_threshold, True, False)
+        selected_pts_mask = torch.logical_and(selected_pts_mask,
+                                              torch.max(self.get_scaling, dim=1).values <= self.percent_dense*scene_extent)
+        
+        new_xyz = self._xyz[selected_pts_mask]
+        new_features_dc = self._features_dc[selected_pts_mask]
+        new_features_rest = self._features_rest[selected_pts_mask]
+        new_opacities = self._opacity[selected_pts_mask]
+        new_scaling = self._scaling[selected_pts_mask]
+        new_rotation = self._rotation[selected_pts_mask]
+        
+        self.densification_postfix(new_xyz, new_features_dc, new_features_rest, new_opacities, new_scaling, new_rotation)
+        
+    def add_densification_stats(self, viewspace_point_tensor, update_filter):
+        self.xyz_gradient_accum[update_filter] += torch.norm(viewspace_point_tensor.grad[update_filter,:2], dim=-1, keepdim=True)
+        self.denom[update_filter] += 1
+        
+
+    def densify(self, max_grad, dummy_max_grad_abs=None, extent=None):
+        grads = self.xyz_gradient_accum / self.denom
+        grads[grads.isnan()] = 0.0
+        
+        self.densify_and_clone(grads, max_grad, extent)
+        self.densify_and_split(grads, max_grad, extent)     
+           

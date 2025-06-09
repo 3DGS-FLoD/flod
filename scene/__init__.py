@@ -12,17 +12,12 @@
 import os
 import random
 import json
-from utils.system_utils import searchForMaxIterationGivenLod, searchForMaxLod, checkFileSize
+from utils.system_utils import searchForMaxIterationGivenLod, searchForMaxLod
 from scene.dataset_readers import sceneLoadTypeCallbacks
 from scene.gaussian_model import GaussianModel
 from arguments import ModelParams
 from utils.camera_utils import cameraList_from_camInfos, camera_to_JSON
-
-import matplotlib.pyplot as plt
-from matplotlib import cm
-
 import torch
-COLORMAP = cm.get_cmap('tab10')
 
 class Scene:
 
@@ -30,7 +25,9 @@ class Scene:
 
     def __init__(self, args : ModelParams, gaussians : GaussianModel, 
                  load_iteration=None, load_lod=None,
-                 shuffle=True, resolution_scales=[1.0], load_only_test_images=False, load_image_device="cuda", load_by_image_names=None, load_ply=True):
+                 shuffle=True, resolution_scales=[1.0], load_only_test_images=False, 
+                 load_image_device="cpu", load_by_image_names=None, load_ply=True,
+                 load_independent_lvl=False):
         """b
         :param path: Path to colmap scene main folder.
         """
@@ -39,10 +36,12 @@ class Scene:
         self.loaded_lod = None
         self.gaussians = gaussians
 
+        # load_image_device = args.data_device
+
         print(f"Memory allocated at scene init: {torch.cuda.memory_allocated() / 1024**2} MB")
-        
+                
         if load_iteration:
-            if load_lod != -1:
+            if load_lod != -1 and not load_independent_lvl:
                 self.loaded_lod = load_lod
             else: # search for max lod at either -1 or None for load_lod value
                 self.loaded_lod = searchForMaxLod(os.path.join(self.model_path, "point_cloud"))
@@ -55,7 +54,7 @@ class Scene:
                             
         self.train_cameras = {}
         self.test_cameras = {}
-
+                    
         if os.path.exists(os.path.join(args.source_path, "sparse")):
             scene_info = sceneLoadTypeCallbacks["Colmap"](args.source_path, args.images, args.eval, load_ply=load_ply)
         elif os.path.exists(os.path.join(args.source_path, "transforms_train.json")):
@@ -113,12 +112,8 @@ class Scene:
                                                             "point_cloud",
                                                             f"lod_{self.loaded_lod}_iteration_{self.loaded_iter}",
                                                             "point_cloud.ply"))
-                self.gaussians.load_parent_lod_gaussian_stack(os.path.join(self.model_path,
-                                                            "point_cloud",
-                                                            f"lod_{self.loaded_lod}_iteration_{self.loaded_iter}",
-                                                            "ancestry.pt"))
             else:
-                self.gaussians.create_from_pcd(scene_info.point_cloud, self.cameras_extent)
+                self.gaussians.create_from_pcd(scene_info.point_cloud, self.cameras_extent, args.init_opacity)
 
             print(f"Memory allocated at scene load gaussians: {torch.cuda.memory_allocated() / 1024**2} MB")
 
@@ -132,4 +127,3 @@ class Scene:
     def save(self, iteration, lod):
         point_cloud_path = os.path.join(self.model_path, "point_cloud/lod_{}_iteration_{}".format(lod, iteration))
         self.gaussians.save_ply(os.path.join(point_cloud_path, "point_cloud.ply"))
-        self.gaussians.save_parent_lod_gaussian_stack(os.path.join(point_cloud_path, "ancestry.pt"))
