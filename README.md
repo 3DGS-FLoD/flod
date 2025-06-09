@@ -48,7 +48,7 @@ Render and evaluate by...
 render.sh 
 ```
 
-## Viewer(Demo)
+## Viewer(Demo on Laptop, GeForce MX250)
 https://github.com/user-attachments/assets/04de9f26-b25d-4aa9-bed8-5fd3060f0b49
 
 To run viewer as demonstrated on our project page
