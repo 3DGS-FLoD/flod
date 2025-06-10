@@ -70,13 +70,13 @@ Our code is largely based on their open-source project: [graphdeco-inria/gaussia
 
 ## Citation
 ```bibtex
-@misc{seo2024flod,
-      title={FLoD: Integrating Flexible Level of Detail into 3D Gaussian Splatting for Customizable Rendering}, 
-      author={Yunji Seo and Young Sun Choi and Hyun Seung Son and Youngjung Uh},
-      year={2024},
-      eprint={2408.12894},
-      archivePrefix={arXiv},
-      primaryClass={cs.CV},
-      url={https://arxiv.org/abs/2408.12894}, 
+@article{seo2025flod,
+      author  = {Yunji Seo and Young Sun Choi and Hyun Seung Son and Youngjung Uh},
+      title   = {FLoD: Integrating Flexible Level of Detail into 3D Gaussian Splatting for Customizable Rendering},
+      journal = {ACM Transactions on Graphics (Proceedings of SIGGRAPH)},
+      number  = {4},
+      volume  = {44},
+      year    = {2025},
+      doi     = {10.1145/3731430}
 }
 ```
