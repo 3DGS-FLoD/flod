@@ -42,6 +42,7 @@ To reproduce, run...
 ```bash
 train.sh 
 ```
+Link to datasets used in the paper: [Mip-NeRF 360](https://jonbarron.info/mipnerf360/), [Tanks&Temples](https://www.tanksandtemples.org/download/), [DL3DV-10K](https://github.com/DL3DV-10K/Dataset?tab=readme-ov-file#dataset-download)
 
 Render and evaluate by...
 ```bash
