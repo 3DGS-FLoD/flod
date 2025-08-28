@@ -11,7 +11,7 @@ Yunji Seo*, Young Sun Choi*, Hyun Seung Son, [Youngjung Uh](https://vilab.yonsei
 We introduce integrating a Flexible Level of Detail (FLoD) to 3DGS, to allow a scene to be rendered at varying levels of detail according to hardware capabilities.  
 
 ## Installation
-Our code was tested on conda environment installed with environment.yml and the submodules below.
+Our code was tested Ubuntu 20.04.6 LTS, on conda environment installed with environment.yml and the submodules below.
 
 ```bash
 git clone https://github.com/3DGS-FLoD/flod.git
