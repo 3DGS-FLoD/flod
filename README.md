@@ -1,5 +1,7 @@
 # FLoD: Integrating Flexible Level of Detail into 3D Gaussian Splatting for Customizable Rendering
 
+**This is the official implementation of FLoD.**
+
 Yunji Seo*, Young Sun Choi*, Hyun Seung Son, [Youngjung Uh](https://vilab.yonsei.ac.kr/member/professor)
 
 [![arXiv](https://img.shields.io/badge/arXiv-2408.128894-b31b1b.svg)](https://arxiv.org/abs/2408.12894) 
@@ -37,6 +39,25 @@ pip install submodules/diff-gaussian-rasterization
 pip install submodules/simple-knn
 ```
 
+## Hardware Requirements
+
+### Training
+- **Trained on**: a single RTX A5000 GPU with 24GB VRAM
+- **VRAM requirement**: ~22GB VRAM is required for training of all scenes
+
+### Evaluation/Inference
+- **Tested on**:
+  - a single RTX A5000 GPU with 24GB VRAM
+  - a single GTX 1080 GPU with 8GB VRAM
+  - a single GeForce MX250 GPU with 2GB VRAM (for laptop evaluations)
+- **VRAM requirement**: ~3GB VRAM is required for full evaluation on all scenes
+
+### Training Duration
+Average training duration per scene:
+- **DL3DV-10K**: ~40min
+- **Mip-NeRF 360**: ~80min
+- **Tanks and Temples**: ~20min
+
 ## Training and Evaluation
 To reproduce, run...
 (Links to datasets used in the paper: [Mip-NeRF 360](https://jonbarron.info/mipnerf360/), [Tanks&Temples](https://www.tanksandtemples.org/download/), [DL3DV-10K](https://github.com/DL3DV-10K/Dataset?tab=readme-ov-file#dataset-download))
@@ -48,6 +69,48 @@ Render and evaluate by...
 ```bash
 render.sh 
 ```
+
+## Pretrained Models
+Pretrained FLoD-3DGS models are available in [pretrained_models.zip](https://drive.google.com/file/d/1-KheZch6h4A1b-HLsFOr_7PxE9-Aj23k/view?usp=drive_link).
+
+### Using Pretrained Models
+The pretrained models are organized in the `pretrained_models/` directory with the following structure:
+```
+pretrained_models/
+├── mipnerf360/
+│   ├── bonsai/
+│   ├── kitchen/
+│   ├── counter/
+│   └── ...
+├── dl3dv/
+│   ├── [hash1]/
+│   ├── [hash2]/
+│   └── ...
+└── tnt/
+    ├── truck/
+    └── train/
+```
+
+Each scene contains:
+- `point_cloud/` directory (model data)
+- `cfg_args` file (configuration)
+
+**Important**: Before running the pretrained models, you need to modify the `cfg_args` files:
+
+1. **Update source_path**: Replace `{path-to-data}` with the actual path to your dataset:
+   ```
+   source_path='{path-to-data}/mipnerf360/bonsai'
+   ```
+   Change to:
+   ```
+   source_path='/path/to/your/mipnerf360/bonsai'
+   ```
+
+2. **Verify model_path**: Should already be correct:
+   ```
+   model_path='./pretrained_models/{dataset}/{scene}'
+   ```
+
 
 ## Viewer(Demo on Laptop, GeForce MX250)
 https://github.com/user-attachments/assets/04de9f26-b25d-4aa9-bed8-5fd3060f0b49
@@ -62,12 +125,10 @@ SIBR_viewers/install/bin/SIBR_flodViewer_app -m /path/to/your/model
 We build our code for FLoD on top of the open-source code of 3D Gaussian Splatting.  
 Hence our licencse follows [graphdeco-inria/gaussian-splatting](https://github.com/graphdeco-inria/gaussian-splatting)
 
-
 ## Acknowledgement
 We would like to express our gratitude to the authors of the 3D Gaussian Splatting.  
 Their work has laid the foundation for this research.  
 Our code is largely based on their open-source project: [graphdeco-inria/gaussian-splatting](https://github.com/graphdeco-inria/gaussian-splatting)
-
 
 ## Citation
 ```bibtex
