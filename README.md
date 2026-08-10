@@ -71,7 +71,7 @@ render.sh
 ```
 
 ## Pretrained Models
-Pretrained FLoD-3DGS models are available in [Hugging Face]((https://huggingface.co/laphisboy/3DGS-FLoD_pretrained_models/tree/main).
+Pretrained FLoD-3DGS models are available in [Hugging Face](https://huggingface.co/laphisboy/3DGS-FLoD_pretrained_models/tree/main).
 
 ### Using Pretrained Models
 The pretrained models are organized in the `pretrained_models/` directory with the following structure:
